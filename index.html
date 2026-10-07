@@ -149,16 +149,15 @@ input[type=text]{font:inherit;font-weight:800;font-size:1.4rem;width:100%;paddin
   <!-- REGISTRO -->
   <section id="p-registro" class="wrap" hidden>
     <h2>¿Quiénes juegan?</h2>
+    <div class="panel asiento"><div><span class="rot">Grado de los dos jugadores</span><div class="opciones" data-campo="grado" data-lado="izq"></div></div></div>
     <div class="asientos">
       <div class="panel asiento" id="as-izq">
         <h3>Jugador de la izquierda · teclas A S D</h3>
-        <div><span class="rot">Grado</span><div class="opciones" data-campo="grado" data-lado="izq"></div></div>
         <div><label for="nom-izq">Nombre</label><input type="text" id="nom-izq" maxlength="16" autocomplete="off" placeholder="Tu nombre"></div>
         <div><span class="rot">Color</span><div class="opciones" data-campo="color" data-lado="izq"></div></div>
       </div>
       <div class="panel asiento" id="as-der">
         <h3>Jugador de la derecha · teclas 1 2 3</h3>
-        <div><span class="rot">Grado</span><div class="opciones" data-campo="grado" data-lado="der"></div></div>
         <div><label for="nom-der">Nombre</label><input type="text" id="nom-der" maxlength="16" autocomplete="off" placeholder="Tu nombre"></div>
         <div><span class="rot">Color</span><div class="opciones" data-campo="color" data-lado="der"></div></div>
       </div>
@@ -314,7 +313,7 @@ document.querySelectorAll(".opciones").forEach(function(box){
     var b=el("button","op"+(campo==="color"?" "+v:""),campo==="grado"?v+"°":NOMBRE_COLOR[v]);
     b.type="button";b.dataset.v=v;b.setAttribute("aria-pressed","false");
     b.addEventListener("click",function(){
-      if(campo==="grado")reg[lado].grado=v;
+      if(campo==="grado")reg.izq.grado=reg.der.grado=v;
       else{reg[lado].color=v;reg[lado==="izq"?"der":"izq"].color=v==="naranja"?"azul":"naranja"}
       pintarRegistro()});
     box.appendChild(b)});
@@ -324,9 +323,9 @@ function pintarRegistro(){
   document.querySelectorAll(".opciones").forEach(function(box){var r=reg[box.dataset.lado][box.dataset.campo];
     box.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-pressed",String(String(r)===b.dataset.v))})});
   LADOS.forEach(function(l){$("as-"+l).dataset.color=reg[l].color||""});
-  var falta=[];
+  var falta=[];if(!reg.izq.grado)falta.push("elegir el grado");
   LADOS.forEach(function(l){var q=l==="izq"?"izquierda":"derecha";
-    if(!reg[l].grado)falta.push("el grado de la "+q);if(!nombre(l))falta.push("el nombre de la "+q)});
+    if(!nombre(l))falta.push("el nombre de la "+q)});
   if(!reg.izq.color)falta.push("el color");
   $("b-empezar").disabled=falta.length>0;
   $("reg-aviso").textContent=falta.length?"Falta "+falta[0]+".":"Uno es Naranja y el otro Azul. ¡Listos!";
