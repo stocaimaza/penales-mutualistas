@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Penales Mutualistas</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800&display=swap">
+<style>
+/* Layout: una cancha de noche. Arriba el marcador Naranja vs. Azul como tablero de estadio;
+   el juego ocupa una columna central con un asiento a cada lado del arco. Un solo tema, a propósito. */
+:root{
+  color-scheme:dark;
+  --pasto:#0f5a36; --pasto-osc:#0a4429; --pasto-claro:#16703f;
+  --tiza:#f6f4e8; --tiza-suave:#c9d8c4; --linea:rgba(246,244,232,.28);
+  --naranja:#ff8a1f; --naranja-osc:#b85a00; --azul:#3d8bff; --azul-osc:#1c57b8;
+  --celeste:#7cc4f2; --kit:#b6f23a; --tribuna:#10213f; --panel:#0b3a24; --tinta:#08281a; --gol:#ffe14d; --error:#ff7a6b;
+  --display:"Lilita One","Arial Rounded MT Bold","Trebuchet MS",sans-serif;
+  --texto:"Nunito","Trebuchet MS",Verdana,sans-serif;
+}
+*{box-sizing:border-box}
+body{background:var(--pasto);color:var(--tiza);font-family:var(--texto);font-weight:600;font-size:17px;line-height:1.4;
+  background-image:repeating-linear-gradient(90deg,var(--pasto) 0 90px,var(--pasto-claro) 90px 180px);padding-inline:16px;padding-block:16px 40px}
+.wrap{max-width:900px;margin-inline:auto;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance;letter-spacing:.02em}
+h1{font-size:clamp(1.7rem,5vw,2.6rem)}
+h2{font-size:1.4rem}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.estado{font-size:.85rem;color:var(--tiza-suave);background:var(--panel);border-radius:99px;padding:4px 12px}
+button{font:inherit;cursor:pointer;color:inherit}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gol);outline-offset:2px}
+.btn{font-family:var(--display);font-size:1.25rem;background:var(--tiza);color:var(--tinta);border:0;border-radius:14px;padding:12px 26px;box-shadow:0 5px 0 var(--tinta)}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--tinta)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.grande{font-size:1.7rem;padding:16px 40px;background:var(--gol)}
+.btn.sec{background:transparent;color:var(--tiza);border:2px solid var(--linea);box-shadow:none;font-size:1.05rem;padding:9px 18px}
+.fila{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:center}
+.panel{background:var(--panel);border-radius:18px;padding:18px;min-width:0}
+
+/* Tablero */
+.tablero{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:stretch;text-align:center}
+.equipo{border-radius:18px;padding:14px 8px;color:var(--tinta);min-width:0}
+.equipo.naranja{background:var(--naranja)} .equipo.azul{background:var(--azul)}
+.equipo .nom{font-family:var(--display);font-size:clamp(1.1rem,4vw,1.7rem);letter-spacing:.06em}
+.equipo .pct{font-family:var(--display);font-size:clamp(2.6rem,13vw,5.5rem);line-height:1;font-variant-numeric:tabular-nums}
+.equipo .det{font-weight:800;font-size:.95rem}
+.vs{align-self:center;font-family:var(--display);font-size:1.4rem;color:var(--tiza-suave)}
+.lider{text-align:center;font-family:var(--display);font-size:1.3rem}
+.vacio{text-align:center;color:var(--tiza-suave);padding:10px}
+.dos{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--linea);white-space:nowrap}
+th{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--tiza-suave)}
+.chip{display:inline-block;border-radius:99px;padding:1px 10px;color:var(--tinta);font-weight:800;font-size:.85rem}
+.chip.naranja{background:var(--naranja)} .chip.azul{background:var(--azul)}
+
+/* Registro */
+.asientos{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.asiento{border:3px solid var(--linea);display:flex;flex-direction:column;gap:14px}
+.asiento[data-color="naranja"]{border-color:var(--naranja)} .asiento[data-color="azul"]{border-color:var(--azul)}
+.asiento label,.asiento .rot{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--tiza-suave);display:block;margin-bottom:6px}
+.opciones{display:flex;flex-wrap:wrap;gap:8px}
+.op{font-family:var(--display);font-size:1.3rem;min-width:52px;padding:8px 12px;border-radius:12px;border:2px solid var(--linea);background:transparent}
+.op[aria-pressed="true"]{background:var(--tiza);color:var(--tinta);border-color:var(--tiza)}
+.op.naranja[aria-pressed="true"]{background:var(--naranja);border-color:var(--naranja)}
+.op.azul[aria-pressed="true"]{background:var(--azul);border-color:var(--azul)}
+input[type=text]{font:inherit;font-weight:800;font-size:1.4rem;width:100%;padding:10px 12px;border-radius:12px;border:2px solid var(--linea);background:var(--tinta);color:var(--tiza)}
+.aviso{text-align:center;color:var(--tiza-suave);min-height:1.4em}
+
+/* Juego */
+.marcador-tanda{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center}
+.jug{border-radius:14px;padding:8px 12px;color:var(--tinta);min-width:0}
+.jug.naranja{background:var(--naranja)} .jug.azul{background:var(--azul)}
+.jug .n{font-family:var(--display);font-size:1.3rem;overflow-wrap:anywhere}
+.jug.der{text-align:right}
+.puntos{display:flex;flex-wrap:wrap;gap:4px;font-weight:800;font-size:1.1rem;min-height:1.5em}
+.jug.der .puntos{justify-content:flex-end}
+.punto{width:1.4em;height:1.4em;border-radius:50%;background:rgba(8,40,26,.25);display:grid;place-items:center;font-size:.8em}
+.punto.gol{background:var(--tinta);color:var(--gol)} .punto.no{background:var(--tinta);color:var(--error)}
+.resultado{font-family:var(--display);font-size:2.4rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cancha{position:relative;width:100%;max-width:640px;margin-inline:auto;aspect-ratio:16/10;background:var(--pasto-osc);border-radius:18px;overflow:hidden;border:3px solid var(--linea)}
+.arco{z-index:1;position:absolute;left:10%;top:8%;width:80%;height:46%;border:6px solid var(--tiza);border-bottom:0;
+  background:repeating-linear-gradient(0deg,transparent 0 13px,var(--linea) 13px 14px),repeating-linear-gradient(90deg,transparent 0 13px,var(--linea) 13px 14px);display:grid;grid-template-columns:repeat(3,1fr)}
+.zona{border-right:2px dashed var(--linea)} .zona:last-child{border-right:0}
+.raya{position:absolute;left:0;right:0;top:54%;height:3px;background:var(--linea)}
+.arquero{z-index:2;position:absolute;top:22%;left:50%;width:13%;height:32%;transform:translateX(-50%);transition:left .4s ease-out,transform .4s ease-out;border-radius:40% 40% 18% 18%;background:var(--tiza);border:5px solid var(--tinta)}
+.arquero::before{content:"🧤";position:absolute;inset:0;display:grid;place-items:center;font-size:clamp(1.2rem,5vw,2.2rem)}
+ .arquero{background:var(--kit)}
+.cancha::before{content:"";position:absolute;inset:0 0 46% 0;background:
+  radial-gradient(circle,var(--tiza) 1.2px,transparent 1.8px) 0 0/11px 9px,
+  radial-gradient(circle,var(--celeste) 1.3px,transparent 1.9px) 5px 4px/11px 9px,var(--tribuna)}
+.cancha::after{content:"";position:absolute;left:0;right:0;top:0;height:5%;background:radial-gradient(ellipse at 15% 0,var(--tiza),transparent 30%),radial-gradient(ellipse at 85% 0,var(--tiza),transparent 30%);opacity:.7}
+.pateador{position:absolute;left:36%;top:68%;width:9%;height:24%;border:4px solid var(--tinta);border-radius:30% 30% 12% 12%;
+  background:repeating-linear-gradient(90deg,var(--celeste) 0 25%,var(--tiza) 25% 50%);display:grid;place-items:center;font-family:var(--display);color:var(--tinta);font-size:clamp(1rem,4.5vw,1.9rem);transition:left .3s}
+.pateador::after{content:"";position:absolute;left:50%;bottom:100%;width:55%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;background:var(--tiza-suave);border:4px solid var(--tinta)}
+.pateador.patea{left:41%}
+.reloj{height:12px;border-radius:99px;background:var(--panel);overflow:hidden;max-width:640px;width:100%;margin-inline:auto}
+.reloj i{display:block;height:100%;width:100%;background:var(--gol)}
+.pelota{z-index:3;position:absolute;left:50%;top:84%;transform:translate(-50%,-50%);font-size:clamp(1.6rem,7vw,3rem);transition:left .4s ease-in,top .4s ease-in,font-size .4s;line-height:1}
+.pelota.vuela{font-size:clamp(1.1rem,4.5vw,2rem)}
+.cartel{z-index:4;position:absolute;inset:auto 0 6% 0;text-align:center;font-family:var(--display);font-size:clamp(2rem,9vw,4rem);color:var(--gol);text-shadow:0 4px 0 var(--tinta)}
+.cartel.no{color:var(--tiza)}
+.controles{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ctrl{text-align:center;border:3px solid var(--linea);display:flex;flex-direction:column;gap:8px;align-items:center}
+.ctrl.naranja{border-color:var(--naranja)} .ctrl.azul{border-color:var(--azul)}
+.rol{font-family:var(--display);font-size:clamp(1.1rem,4.5vw,1.6rem)}
+.teclas{display:flex;gap:8px;justify-content:center}
+.tecla{font-family:var(--display);width:clamp(48px,13vw,70px);padding:6px 0;border-radius:12px;border:0;background:var(--tiza);color:var(--tinta);box-shadow:0 5px 0 var(--tinta);display:flex;flex-direction:column;align-items:center;line-height:1.1}
+.tecla b{font-size:clamp(1.3rem,5vw,1.9rem);font-weight:400} .tecla span{font-size:1.1rem}
+.tecla:disabled{opacity:.4}
+.listo{font-weight:800;min-height:1.5em;color:var(--gol)}
+.turno{text-align:center;font-family:var(--display);font-size:1.3rem;min-height:1.6em}
+
+/* Final */
+.final{text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center}
+.final .gano{font-family:var(--display);font-size:clamp(2rem,8vw,3.6rem);line-height:1.05;overflow-wrap:anywhere}
+.final .gano.naranja{color:var(--naranja)} .final .gano.azul{color:var(--azul)}
+.final .num{font-family:var(--display);font-size:3rem;font-variant-numeric:tabular-nums}
+@media (max-width:520px){.controles{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.arquero,.pelota,.pateador{transition:none}}
+</style>
+
+<style>body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>⚽ Penales Mutualistas</h1>
+    <span class="estado" id="estado">Conectando con el marcador…</span>
+  </header>
+
+  <!-- INICIO / MARCADOR -->
+  <section id="p-inicio" class="wrap">
+    <div class="tablero">
+      <div class="equipo naranja"><div class="nom">NARANJA</div><div class="pct" id="pct-naranja">–</div><div class="det" id="det-naranja">0 tandas ganadas</div></div>
+      <div class="vs">VS</div>
+      <div class="equipo azul"><div class="nom">AZUL</div><div class="pct" id="pct-azul">–</div><div class="det" id="det-azul">0 tandas ganadas</div></div>
+    </div>
+    <div class="lider" id="lider"></div>
+    <div class="fila"><button class="btn grande" id="b-jugar">Jugar una tanda</button></div>
+    <div class="dos">
+      <div class="panel"><h2>Goleadores</h2><div class="scroll" id="ranking"></div></div>
+      <div class="panel"><h2>Por grado</h2><div class="scroll" id="grados"></div></div>
+    </div>
+    <div class="panel"><h2>Últimas tandas</h2><div class="scroll" id="ultimas"></div></div>
+    <div class="fila"><button class="btn sec" id="b-csv" hidden>Descargar resultados (CSV)</button><span class="aviso" id="csv-msg"></span></div>
+  </section>
+
+  <!-- REGISTRO -->
+  <section id="p-registro" class="wrap" hidden>
+    <h2>¿Quiénes juegan?</h2>
+    <div class="asientos">
+      <div class="panel asiento" id="as-izq">
+        <h3>Jugador de la izquierda · teclas A S D</h3>
+        <div><span class="rot">Grado</span><div class="opciones" data-campo="grado" data-lado="izq"></div></div>
+        <div><label for="nom-izq">Nombre</label><input type="text" id="nom-izq" maxlength="16" autocomplete="off" placeholder="Tu nombre"></div>
+        <div><span class="rot">Color</span><div class="opciones" data-campo="color" data-lado="izq"></div></div>
+      </div>
+      <div class="panel asiento" id="as-der">
+        <h3>Jugador de la derecha · teclas J K L</h3>
+        <div><span class="rot">Grado</span><div class="opciones" data-campo="grado" data-lado="der"></div></div>
+        <div><label for="nom-der">Nombre</label><input type="text" id="nom-der" maxlength="16" autocomplete="off" placeholder="Tu nombre"></div>
+        <div><span class="rot">Color</span><div class="opciones" data-campo="color" data-lado="der"></div></div>
+      </div>
+    </div>
+    <div class="aviso" id="reg-aviso"></div>
+    <div class="fila"><button class="btn sec" id="b-volver">Volver</button><button class="btn grande" id="b-empezar" disabled>¡A patear!</button></div>
+  </section>
+
+  <!-- JUEGO -->
+  <section id="p-juego" class="wrap" hidden>
+    <div class="marcador-tanda">
+      <div class="jug izq" id="j-izq"><div class="n"></div><div class="puntos"></div></div>
+      <div class="resultado" id="res">0 - 0</div>
+      <div class="jug der" id="j-der"><div class="n"></div><div class="puntos"></div></div>
+    </div>
+    <div class="turno" id="turno"></div>
+    <div class="reloj" aria-hidden="true"><i id="reloj"></i></div>
+    <div class="cancha">
+      <div class="arco"><div class="zona"></div><div class="zona"></div><div class="zona"></div></div>
+      <div class="raya"></div>
+      <div class="arquero" id="arquero"></div>
+      <div class="pateador" id="pateador">10</div>
+      <div class="pelota" id="pelota">⚽</div>
+      <div class="cartel" id="cartel" hidden></div>
+    </div>
+    <div class="controles">
+      <div class="panel ctrl" id="c-izq"><div class="rol"></div>
+        <div class="teclas"><button class="tecla" data-lado="izq" data-z="0"><b>A</b><span>←</span></button><button class="tecla" data-lado="izq" data-z="1"><b>S</b><span>↑</span></button><button class="tecla" data-lado="izq" data-z="2"><b>D</b><span>→</span></button></div>
+        <div class="listo"></div></div>
+      <div class="panel ctrl" id="c-der"><div class="rol"></div>
+        <div class="teclas"><button class="tecla" data-lado="der" data-z="0"><b>J</b><span>←</span></button><button class="tecla" data-lado="der" data-z="1"><b>K</b><span>↑</span></button><button class="tecla" data-lado="der" data-z="2"><b>L</b><span>→</span></button></div>
+        <div class="listo"></div></div>
+    </div>
+    <div class="fila"><button class="btn sec" id="b-salir">Salir sin guardar</button></div>
+  </section>
+
+  <!-- FINAL -->
+  <section id="p-final" class="panel final" hidden>
+    <div class="gano" id="f-gano"></div>
+    <div class="num" id="f-num"></div>
+    <div id="f-suma"></div>
+    <div class="aviso" id="f-guardado"></div>
+    <div class="fila"><button class="btn" id="b-revancha">Revancha</button><button class="btn" id="b-nuevos">Nuevos jugadores</button><button class="btn sec" id="b-marcador">Ver marcador</button></div>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(id){return document.getElementById(id)};
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+var LADOS=["izq","der"], COLORES=["naranja","azul"], NOMBRE_COLOR={naranja:"Naranja",azul:"Azul"};
+var TECLAS={a:["izq",0],s:["izq",1],d:["izq",2],j:["der",0],k:["der",1],l:["der",2]};
+var ZX=[10+80/6,50,10+80*5/6];
+var CLAVE="penales_mutualistas_tandas";
+
+/* ---------- datos ---------- */
+var db=null, dl=null, remotas=[], puedeEscribir=true;
+function leerLocal(){try{var v=JSON.parse(localStorage.getItem(CLAVE)||"[]");return Array.isArray(v)?v:[]}catch(e){return[]}}
+function guardarLocal(l){try{localStorage.setItem(CLAVE,JSON.stringify(l))}catch(e){}}
+var locales=leerLocal();
+
+function limpia(m,id){ // los datos compartidos no son confiables: validar forma
+  if(!m||typeof m!=="object")return null;
+  function jug(p){if(!p||typeof p!=="object")return null;var g=Number(p.grado);if(!(g>=1&&g<=6))return null;
+    return {nombre:String(p.nombre||"").slice(0,16)||"?",grado:g,goles:Math.max(0,Math.min(99,Number(p.goles)||0))}}
+  var n=jug(m.naranja),a=jug(m.azul);if(!n||!a||COLORES.indexOf(m.ganador)<0)return null;
+  return {id:String(id||m.id||""),ts:Number(m.ts)||0,naranja:n,azul:a,ganador:m.ganador,muerteSubita:!!m.muerteSubita}
+}
+function todas(){
+  var mapa={};
+  remotas.forEach(function(m){mapa[m.id]=m});
+  locales.forEach(function(m){if(!db||!m.sync){var c=limpia(m,m.id);if(c&&!mapa[c.id])mapa[c.id]=c}});
+  return Object.keys(mapa).map(function(k){return mapa[k]}).sort(function(x,y){return y.ts-x.ts});
+}
+function cuerpo(m){return {ts:m.ts,fecha:new Date(m.ts).toISOString(),naranja:m.naranja,azul:m.azul,ganador:m.ganador,muerteSubita:m.muerteSubita}}
+var subiendo=false;
+function subirPendientes(){
+  if(!db||!puedeEscribir||subiendo)return Promise.resolve();
+  var pend=locales.filter(function(m){return !m.sync});
+  if(!pend.length)return Promise.resolve();
+  subiendo=true;
+  var p=pend.reduce(function(ant,m){return ant.then(function(){
+    return db.collection("tandas").doc(m.id).set(cuerpo(m)).then(function(){m.sync=true;guardarLocal(locales)})})},Promise.resolve());
+  return p.catch(function(e){if(e&&e.code==="invalid_argument")puedeEscribir=false}).then(function(){subiendo=false;pintarEstado()});
+}
+function pintarEstado(){
+  var pend=locales.filter(function(m){return !m.sync}).length, t;
+  if(db&&puedeEscribir)t=pend?"Guardando "+pend+" tanda(s)…":"Marcador compartido conectado";
+  else if(db)t="Solo lectura: las tandas quedan en esta compu";
+  else t="Sin marcador compartido: las tandas quedan en esta compu";
+  $("estado").textContent=t;
+}
+function conectar(){
+  if(!window.claude||!window.claude.use){pintarEstado();return}
+  window.claude.use("db").then(function(d){
+    db=d;pintarEstado();if(!db)return;
+    db.collection("tandas").orderBy("ts","desc").limit(1000).onSnapshot(function(s){
+      remotas=s.docs.map(function(x){return limpia(x.data(),x.id)}).filter(Boolean);pintarMarcador();
+    },function(){db=null;pintarEstado();pintarMarcador()});
+    subirPendientes();
+  }).catch(function(){pintarEstado()});
+  window.claude.use("downloads").then(function(d){dl=d;$("b-csv").hidden=!dl}).catch(function(){});
+}
+
+/* ---------- marcador ---------- */
+function pct(g,j){return j?Math.round(g*100/j):0}
+function tabla(cab,filas){var t=el("table"),tr=el("tr");cab.forEach(function(c){tr.appendChild(el("th",null,c))});t.appendChild(tr);
+  filas.forEach(function(f){var r=el("tr");f.forEach(function(c){var td=el("td");if(c instanceof Node)td.appendChild(c);else td.textContent=c;r.appendChild(td)});t.appendChild(r)});return t}
+function chip(c){return el("span","chip "+c,NOMBRE_COLOR[c])}
+function poner(id,nodo){var d=$(id);d.textContent="";d.appendChild(nodo)}
+function pintarMarcador(){
+  var l=todas(),tot={naranja:0,azul:0},grados={},jug={};
+  l.forEach(function(m){tot[m.ganador]++;
+    COLORES.forEach(function(c){var p=m[c],gano=m.ganador===c;
+      var g=grados[p.grado]||(grados[p.grado]={naranja:[0,0],azul:[0,0]});g[c][1]++;if(gano)g[c][0]++;
+      var k=p.nombre.toLowerCase()+"|"+p.grado+"|"+c,r=jug[k]||(jug[k]={nombre:p.nombre,grado:p.grado,color:c,j:0,g:0,goles:0});
+      r.j++;r.goles+=p.goles;if(gano)r.g++})});
+  var n=l.length;
+  COLORES.forEach(function(c){$("pct-"+c).textContent=n?pct(tot[c],n)+"%":"–";
+    $("det-"+c).textContent=tot[c]+(tot[c]===1?" tanda ganada":" tandas ganadas")});
+  $("lider").textContent=!n?"":tot.naranja===tot.azul?"Van empatados en "+n+" tandas":"Va ganando "+(tot.naranja>tot.azul?"NARANJA":"AZUL")+" · "+n+" tandas jugadas";
+  if(!n){["ranking","grados","ultimas"].forEach(function(id){poner(id,el("p","vacio","Todavía no se jugó ninguna tanda. La primera aparece acá."))});return}
+  var rk=Object.keys(jug).map(function(k){return jug[k]}).sort(function(a,b){return b.g-a.g||b.goles-a.goles||a.j-b.j}).slice(0,15);
+  poner("ranking",tabla(["Jugador","Grado","Color","Ganó","Jugó","Goles"],rk.map(function(r){return [r.nombre,r.grado+"°",chip(r.color),r.g,r.j,r.goles]})));
+  var gs=Object.keys(grados).sort();
+  poner("grados",tabla(["Grado","Naranja","Azul"],gs.map(function(g){var x=grados[g];
+    function f(v){return v[0]+" de "+v[1]+" ("+pct(v[0],v[1])+"%)"}return [g+"°",f(x.naranja),f(x.azul)]})));
+  poner("ultimas",tabla(["Naranja","","Azul","Ganó"],l.slice(0,12).map(function(m){
+    return [m.naranja.nombre+" ("+m.naranja.grado+"°)",m.naranja.goles+" - "+m.azul.goles+(m.muerteSubita?" *":""),m.azul.nombre+" ("+m.azul.grado+"°)",chip(m.ganador)]})));
+}
+function csv(){
+  var l=todas().slice().reverse(),q=function(s){return '"'+String(s).replace(/"/g,'""')+'"'};
+  var out=["fecha,hora,naranja_nombre,naranja_grado,naranja_goles,azul_nombre,azul_grado,azul_goles,ganador,muerte_subita"];
+  l.forEach(function(m){var d=new Date(m.ts);
+    out.push([q(d.toLocaleDateString("es-AR")),q(d.toLocaleTimeString("es-AR")),q(m.naranja.nombre),m.naranja.grado,m.naranja.goles,q(m.azul.nombre),m.azul.grado,m.azul.goles,m.ganador,m.muerteSubita?"si":"no"].join(","))});
+  return "﻿"+out.join("\r\n");
+}
+$("b-csv").addEventListener("click",function(){
+  if(!dl)return;var msg=$("csv-msg");
+  if(!todas().length){msg.textContent="Todavía no hay tandas para descargar.";return}
+  dl.save({filename:"penales-mutualistas.csv",data:csv()}).then(function(){msg.textContent="Descargado."})
+    .catch(function(e){msg.textContent=e&&e.code==="declined"?"":"No se pudo descargar. Probá de nuevo en un momento."});
+});
+
+/* ---------- pantallas ---------- */
+var pantalla="inicio";
+function ir(p){pantalla=p;["inicio","registro","juego","final"].forEach(function(x){$("p-"+x).hidden=x!==p});window.scrollTo(0,0)}
+
+/* ---------- registro ---------- */
+var reg={izq:{grado:null,color:null},der:{grado:null,color:null}};
+document.querySelectorAll(".opciones").forEach(function(box){
+  var lado=box.dataset.lado,campo=box.dataset.campo;
+  (campo==="grado"?[1,2,3,4,5,6]:COLORES).forEach(function(v){
+    var b=el("button","op"+(campo==="color"?" "+v:""),campo==="grado"?v+"°":NOMBRE_COLOR[v]);
+    b.type="button";b.dataset.v=v;b.setAttribute("aria-pressed","false");
+    b.addEventListener("click",function(){
+      if(campo==="grado")reg[lado].grado=v;
+      else{reg[lado].color=v;reg[lado==="izq"?"der":"izq"].color=v==="naranja"?"azul":"naranja"}
+      pintarRegistro()});
+    box.appendChild(b)});
+});
+function nombre(lado){var s=$("nom-"+lado).value.replace(/\s+/g," ").trim().slice(0,16);return s?s.charAt(0).toUpperCase()+s.slice(1):""}
+function pintarRegistro(){
+  document.querySelectorAll(".opciones").forEach(function(box){var r=reg[box.dataset.lado][box.dataset.campo];
+    box.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-pressed",String(String(r)===b.dataset.v))})});
+  LADOS.forEach(function(l){$("as-"+l).dataset.color=reg[l].color||""});
+  var falta=[];
+  LADOS.forEach(function(l){var q=l==="izq"?"izquierda":"derecha";
+    if(!reg[l].grado)falta.push("el grado de la "+q);if(!nombre(l))falta.push("el nombre de la "+q)});
+  if(!reg.izq.color)falta.push("el color");
+  $("b-empezar").disabled=falta.length>0;
+  $("reg-aviso").textContent=falta.length?"Falta "+falta[0]+".":"Uno es Naranja y el otro Azul. ¡Listos!";
+}
+LADOS.forEach(function(l){$("nom-"+l).addEventListener("input",pintarRegistro)});
+$("b-jugar").addEventListener("click",function(){ir("registro");pintarRegistro();$("nom-izq").focus()});
+$("b-volver").addEventListener("click",function(){ir("inicio")});
+$("b-empezar").addEventListener("click",function(){
+  empezar({izq:{nombre:nombre("izq"),grado:reg.izq.grado,color:reg.izq.color},der:{nombre:nombre("der"),grado:reg.der.grado,color:reg.der.color}})});
+
+/* ---------- juego ---------- */
+var G=null,timers=[];
+function luego(f,ms){timers.push(setTimeout(f,ms))}
+function cortar(){if(G)clearTimeout(G.reloj);timers.forEach(clearTimeout);timers=[]}
+function empezar(j){
+  cortar();
+  G={j:j,tiros:{izq:[],der:[]},patea:Math.random()<.5?"izq":"der",pick:{izq:null,der:null},fase:"elige",subita:false};
+  LADOS.forEach(function(l){var c=$("j-"+l);c.className="jug "+l+" "+j[l].color;c.querySelector(".n").textContent=j[l].nombre;
+    $("c-"+l).className="panel ctrl "+j[l].color});
+  ir("juego");ronda();
+}
+function goles(l){return G.tiros[l].filter(Boolean).length}
+function otro(l){return l==="izq"?"der":"izq"}
+function pintarTanteador(){
+  LADOS.forEach(function(l){var box=$("j-"+l).querySelector(".puntos");box.textContent="";
+    var n=Math.max(5,G.tiros[l].length);
+    for(var i=0;i<n;i++){var t=G.tiros[l][i];box.appendChild(el("span","punto"+(t===true?" gol":t===false?" no":""),t===true?"●":t===false?"✕":""))}});
+  $("res").textContent=goles("izq")+" - "+goles("der");
+}
+function ronda(){
+  G.pick={izq:null,der:null};G.fase="elige";
+  var p=G.patea,a=otro(p);
+  $("cartel").hidden=true;
+  var pel=$("pelota"),arq=$("arquero");
+  pel.className="pelota";pel.style.left="50%";pel.style.top="84%";
+  arq.className="arquero";$("pateador").className="pateador";arq.style.left="50%";arq.style.transform="translateX(-50%)";
+  $("turno").textContent=(G.subita?"Muerte súbita · ":"")+"Patea "+G.j[p].nombre+", ataja "+G.j[a].nombre;
+  LADOS.forEach(function(l){var c=$("c-"+l);c.querySelector(".rol").textContent=l===p?"⚽ PATEÁS":"🧤 ATAJÁS";
+    c.querySelector(".listo").textContent="";c.querySelectorAll(".tecla").forEach(function(b){b.disabled=false})});
+  pintarTanteador();
+  var ms=G.subita?3000:6000,bar=$("reloj");
+  bar.style.transition="none";bar.style.width="100%";void bar.offsetWidth;bar.style.transition="width "+ms+"ms linear";bar.style.width="0%";
+  clearTimeout(G.reloj);
+  G.reloj=setTimeout(function(){ // se acabó el tiempo: el que patea la tira afuera, el que ataja se queda en el medio
+    if(!G||G.fase!=="elige")return;
+    if(G.pick[p]===null)G.pick[p]=-1;if(G.pick[a]===null)G.pick[a]=1;resolver()},ms);
+}
+function elegir(lado,z){
+  if(pantalla!=="juego"||!G||G.fase!=="elige"||G.pick[lado]!==null)return;
+  G.pick[lado]=z;
+  var c=$("c-"+lado);c.querySelector(".listo").textContent="✓ ¡Listo!";c.querySelectorAll(".tecla").forEach(function(b){b.disabled=true});
+  if(G.pick.izq!==null&&G.pick.der!==null)resolver();
+}
+function resolver(){
+  G.fase="anim";
+  var p=G.patea,a=otro(p),zp=G.pick[p],za=G.pick[a],afuera=zp<0,gol=!afuera&&zp!==za;
+  clearTimeout(G.reloj);var bar=$("reloj");bar.style.transition="none";bar.style.width=getComputedStyle(bar).width;
+  $("pateador").classList.add("patea");
+  var pel=$("pelota"),arq=$("arquero");
+  arq.style.left=ZX[za]+"%";arq.style.transform="translateX(-50%) rotate("+(za-1)*35+"deg)";
+  pel.classList.add("vuela");pel.style.left=(afuera?96:ZX[zp])+"%";pel.style.top=afuera?"2%":gol?"26%":"36%";
+  luego(function(){var c=$("cartel");c.textContent=gol?"¡GOOOL!":afuera?"¡AFUERA!":"¡ATAJADA!";c.className="cartel"+(gol?"":" no");c.hidden=false;
+    G.tiros[p].push(gol);pintarTanteador()},520);
+  luego(function(){
+    var fin=terminado();
+    if(fin)terminar(fin);else{G.patea=a;ronda()}
+  },1900);
+}
+function terminado(){
+  var ni=G.tiros.izq.length,nd=G.tiros.der.length,gi=goles("izq"),gd=goles("der");
+  if(ni<=5&&nd<=5&&!(ni===5&&nd===5)){
+    if(gi>gd+(5-nd))return "izq";if(gd>gi+(5-ni))return "der";return null}
+  if(ni===nd){if(gi!==gd)return gi>gd?"izq":"der";G.subita=true}
+  return null;
+}
+function terminar(gan){
+  G.fase="fin";
+  var j=G.j,m={id:"t"+Date.now().toString(36)+Math.random().toString(36).slice(2,8),ts:Date.now(),ganador:j[gan].color,muerteSubita:G.subita,sync:false};
+  LADOS.forEach(function(l){m[j[l].color]={nombre:j[l].nombre,grado:j[l].grado,goles:goles(l)}});
+  locales.push(m);guardarLocal(locales);
+  var g=$("f-gano");g.className="gano "+j[gan].color;g.textContent="¡Ganó "+j[gan].nombre+"!";
+  $("f-num").textContent=m.naranja.goles+" - "+m.azul.goles;
+  $("f-suma").textContent="Naranja "+m.naranja.goles+", Azul "+m.azul.goles+". Suma una tanda ganada para "+NOMBRE_COLOR[m.ganador].toUpperCase()+".";
+  var fg=$("f-guardado");fg.textContent="Guardando…";
+  ir("final");pintarMarcador();$("b-revancha").focus();
+  subirPendientes().then(function(){fg.textContent=m.sync?"Resultado guardado en el marcador.":"Resultado guardado en esta compu."});
+}
+document.querySelectorAll(".tecla").forEach(function(b){b.addEventListener("click",function(){elegir(b.dataset.lado,Number(b.dataset.z))})});
+document.addEventListener("keydown",function(e){
+  if(e.repeat||e.ctrlKey||e.metaKey||e.altKey)return;
+  if(pantalla==="registro"&&e.key==="Enter"&&!$("b-empezar").disabled){$("b-empezar").click();return}
+  if(pantalla!=="juego")return;
+  var t=TECLAS[String(e.key).toLowerCase()];if(t){e.preventDefault();elegir(t[0],t[1])}
+});
+$("b-salir").addEventListener("click",function(){cortar();G=null;ir("inicio")});
+$("b-revancha").addEventListener("click",function(){if(G)empezar(G.j)});
+$("b-nuevos").addEventListener("click",function(){
+  reg={izq:{grado:null,color:null},der:{grado:null,color:null}};$("nom-izq").value="";$("nom-der").value="";
+  ir("registro");pintarRegistro();$("nom-izq").focus()});
+$("b-marcador").addEventListener("click",function(){ir("inicio")});
+
+pintarMarcador();pintarEstado();conectar();
+})();
+</script>
+</body>
+</html>
