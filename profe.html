@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Informe del profe · Penales Mutualistas</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800&display=swap">
+<style>
+/* Panel del profe: una tarjeta de informe que entra en una captura de celular, y el detalle debajo. */
+:root{
+  color-scheme:dark;
+  --pasto:#0f5a36; --pasto-claro:#16703f; --tiza:#f6f4e8; --tiza-suave:#c9d8c4; --linea:rgba(246,244,232,.28);
+  --naranja:#ff8a1f; --azul:#3d8bff; --panel:#0b3a24; --tinta:#08281a; --gol:#ffe14d;
+  --display:"Lilita One","Arial Rounded MT Bold","Trebuchet MS",sans-serif;
+  --texto:"Nunito","Trebuchet MS",Verdana,sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--pasto);color:var(--tiza);font-family:var(--texto);font-weight:600;font-size:16px;line-height:1.4;padding-inline:16px;padding-block:14px 40px}
+.wrap{max-width:560px;margin-inline:auto;display:flex;flex-direction:column;gap:14px}
+h1,h2{font-family:var(--display);font-weight:400;margin:0;letter-spacing:.02em}
+h1{font-size:1.5rem} h2{font-size:1.2rem}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gol);outline-offset:2px}
+.fila{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.rot{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--tiza-suave)}
+.op{font-family:var(--display);font-size:1.2rem;min-width:46px;padding:6px 10px;border-radius:10px;border:2px solid var(--linea);background:transparent}
+.op[aria-pressed="true"]{background:var(--tiza);color:var(--tinta);border-color:var(--tiza)}
+input[type=date]{padding:7px 10px;border-radius:10px;border:2px solid var(--linea);background:var(--tinta);font-weight:800}
+.sec{padding:7px 14px;border-radius:10px;border:2px solid var(--linea);background:transparent;font-weight:800}
+.panel{background:var(--panel);border-radius:16px;padding:14px;min-width:0}
+.informe{text-align:center;display:flex;flex-direction:column;gap:10px;border:3px solid var(--linea)}
+.informe.naranja{border-color:var(--naranja)} .informe.azul{border-color:var(--azul)}
+.informe .cab{font-family:var(--display);font-size:1.3rem}
+.informe .sub{color:var(--tiza-suave);font-size:.9rem}
+.gano{font-family:var(--display);font-size:clamp(2.2rem,11vw,3.4rem);line-height:1}
+.gano.naranja{color:var(--naranja)} .gano.azul{color:var(--azul)}
+.duelo{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.eq{border-radius:14px;padding:10px 6px;color:var(--tinta);min-width:0}
+.eq.naranja{background:var(--naranja)} .eq.azul{background:var(--azul)}
+.eq .n{font-family:var(--display);letter-spacing:.05em}
+.eq .big{font-family:var(--display);font-size:2.6rem;line-height:1;font-variant-numeric:tabular-nums}
+.eq .d{font-weight:800;font-size:.9rem;overflow-wrap:anywhere}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:5px 7px;text-align:left;border-bottom:1px solid var(--linea);white-space:nowrap}
+th{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--tiza-suave)}
+.chip{display:inline-block;border-radius:99px;padding:0 9px;color:var(--tinta);font-weight:800;font-size:.85rem}
+.chip.naranja{background:var(--naranja)} .chip.azul{background:var(--azul)}
+.vacio{color:var(--tiza-suave);text-align:center;margin:0}
+.estado{font-size:.85rem;color:var(--tiza-suave)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="fila" style="justify-content:space-between"><h1>Informe del profe</h1><span class="estado" id="estado">Cargando…</span></div>
+  <div class="fila"><span class="rot">Día</span><input type="date" id="dia"><button class="sec" id="b-act">Actualizar</button></div>
+  <div class="fila"><span class="rot">Grado</span><span class="fila" id="grados"></span></div>
+
+  <section class="panel informe" id="informe"></section>
+
+  <section class="panel"><h2>Resumen del día</h2><div class="scroll" id="resumen"></div></section>
+  <section class="panel"><h2 id="t-alumnos">Alumnos que jugaron</h2><div class="scroll" id="alumnos"></div></section>
+  <section class="panel"><h2 id="t-tandas">Tandas</h2><div class="scroll" id="tandas"></div></section>
+  <div class="fila"><a class="sec" id="b-csv" href="#" style="text-decoration:none;color:inherit">Descargar todo (CSV)</a></div>
+</div>
+<script>
+(function(){
+"use strict";
+var DB="https://penales-mutualistas-default-rtdb.firebaseio.com";
+var $=function(id){return document.getElementById(id)};
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+var COLORES=["naranja","azul"],NOM={naranja:"Naranja",azul:"Azul"};
+var lista=[],grado=4;
+
+function limpia(m,id){
+  if(!m||typeof m!=="object")return null;
+  function jug(p){if(!p||typeof p!=="object")return null;var g=Number(p.grado);if(!(g>=1&&g<=6))return null;
+    return {nombre:String(p.nombre||"").slice(0,16)||"?",grado:g,goles:Math.max(0,Math.min(99,Number(p.goles)||0))}}
+  var n=jug(m.naranja),a=jug(m.azul);if(!n||!a||COLORES.indexOf(m.ganador)<0)return null;
+  return {id:String(id),ts:Number(m.ts)||0,naranja:n,azul:a,ganador:m.ganador,muerteSubita:!!m.muerteSubita}
+}
+function clave(ts){var d=new Date(ts);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function pct(g,j){return j?Math.round(g*100/j):0}
+function tabla(cab,filas){var t=el("table"),tr=el("tr");cab.forEach(function(c){tr.appendChild(el("th",null,c))});t.appendChild(tr);
+  filas.forEach(function(f){var r=el("tr");f.forEach(function(c){var td=el("td");if(c instanceof Node)td.appendChild(c);else td.textContent=c;r.appendChild(td)});t.appendChild(r)});return t}
+function chip(c){return el("span","chip "+c,NOM[c])}
+function poner(id,n){var d=$(id);d.textContent="";d.appendChild(n)}
+
+/* Resultado de un grado en un día. Cada alumno suma para su propio grado.
+   Gana el color con mayor % de tandas ganadas; si empatan, el que hizo más goles. */
+function calcular(tandas,g){
+  var r={naranja:{j:0,g:0,goles:0},azul:{j:0,g:0,goles:0},alumnos:{},tandas:[]};
+  tandas.forEach(function(m){var toca=false;
+    COLORES.forEach(function(c){var p=m[c];if(p.grado!==g)return;toca=true;
+      var e=r[c];e.j++;e.goles+=p.goles;if(m.ganador===c)e.g++;
+      var k=p.nombre.toLowerCase()+"|"+c,a=r.alumnos[k]||(r.alumnos[k]={nombre:p.nombre,color:c,j:0,g:0,goles:0});
+      a.j++;a.goles+=p.goles;if(m.ganador===c)a.g++});
+    if(toca)r.tandas.push(m)});
+  var pn=r.naranja.j?r.naranja.g/r.naranja.j:-1,pa=r.azul.j?r.azul.g/r.azul.j:-1;
+  r.ganador=!r.tandas.length?null:pn>pa?"naranja":pa>pn?"azul":r.naranja.goles>r.azul.goles?"naranja":r.azul.goles>r.naranja.goles?"azul":"empate";
+  r.porGoles=r.ganador&&r.ganador!=="empate"&&pn===pa;
+  return r;
+}
+function goleador(r,c){var l=Object.keys(r.alumnos).map(function(k){return r.alumnos[k]}).filter(function(a){return a.color===c}).sort(function(a,b){return b.goles-a.goles||b.g-a.g});
+  return l.length?l[0].nombre+" ("+l[0].goles+")":"–"}
+
+function pintar(){
+  var dia=$("dia").value,hoy=lista.filter(function(m){return clave(m.ts)===dia});
+  document.querySelectorAll("#grados .op").forEach(function(b){b.setAttribute("aria-pressed",String(Number(b.dataset.g)===grado))});
+  var r=calcular(hoy,grado),box=$("informe"),f=new Date(dia+"T12:00:00");
+  var fecha=isNaN(f)?dia:f.toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"});
+  box.textContent="";box.className="panel informe"+(r.ganador&&r.ganador!=="empate"?" "+r.ganador:"");
+  box.appendChild(el("div","cab","Penales Mutualistas · "+grado+"° grado"));
+  box.appendChild(el("div","sub",fecha+" · "+r.tandas.length+(r.tandas.length===1?" tanda jugada":" tandas jugadas")));
+  if(!r.ganador)box.appendChild(el("p","vacio","Todavía no hay tandas de "+grado+"° en este día."));
+  else{
+    box.appendChild(el("div","gano"+(r.ganador==="empate"?"":" "+r.ganador),r.ganador==="empate"?"EMPATE":"GANÓ "+NOM[r.ganador].toUpperCase()));
+    if(r.porGoles)box.appendChild(el("div","sub","Empataron en tandas ganadas: define la cantidad de goles."));
+    var d=el("div","duelo");
+    COLORES.forEach(function(c){var e=r[c],q=el("div","eq "+c);
+      q.appendChild(el("div","n",NOM[c].toUpperCase()));q.appendChild(el("div","big",pct(e.g,e.j)+"%"));
+      q.appendChild(el("div","d",e.g+" de "+e.j+" tandas ganadas"));q.appendChild(el("div","d",e.goles+" goles"));
+      q.appendChild(el("div","d","Goleador: "+goleador(r,c)));d.appendChild(q)});
+    box.appendChild(d);
+  }
+  // resumen de todos los grados del día
+  var filas=[];for(var g=1;g<=6;g++){var x=calcular(hoy,g);if(!x.ganador)continue;
+    filas.push([g+"°",x.ganador==="empate"?"Empate":chip(x.ganador),x.naranja.g+" de "+x.naranja.j,x.azul.g+" de "+x.azul.j,x.tandas.length])}
+  poner("resumen",filas.length?tabla(["Grado","Ganó","Naranja","Azul","Tandas"],filas):el("p","vacio","Sin tandas en este día."));
+  $("t-alumnos").textContent="Alumnos de "+grado+"° que jugaron";$("t-tandas").textContent="Tandas de "+grado+"°";
+  var al=Object.keys(r.alumnos).map(function(k){return r.alumnos[k]}).sort(function(a,b){return a.nombre.localeCompare(b.nombre)});
+  poner("alumnos",al.length?tabla(["Alumno","Color","Jugó","Ganó","Goles"],al.map(function(a){return [a.nombre,chip(a.color),a.j,a.g,a.goles]})):el("p","vacio","Nadie todavía."));
+  poner("tandas",r.tandas.length?tabla(["Hora","Naranja","","Azul","Ganó"],r.tandas.map(function(m){
+    return [new Date(m.ts).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}),m.naranja.nombre+" ("+m.naranja.grado+"°)",m.naranja.goles+" - "+m.azul.goles,m.azul.nombre+" ("+m.azul.grado+"°)",chip(m.ganador)]})):el("p","vacio","Nada todavía."));
+}
+function leer(){
+  $("estado").textContent="Actualizando…";
+  return fetch(DB+"/tandas.json",{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("http");return r.json()}).then(function(o){
+    lista=Object.keys(o||{}).map(function(k){return limpia(o[k],k)}).filter(Boolean).sort(function(a,b){return b.ts-a.ts});
+    $("estado").textContent="Actualizado "+new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
+  }).catch(function(){$("estado").textContent="Sin conexión. Tocá Actualizar para reintentar."}).then(pintar);
+}
+for(var g=1;g<=6;g++)(function(g){var b=el("button","op",g+"°");b.type="button";b.dataset.g=g;b.addEventListener("click",function(){grado=g;pintar()});$("grados").appendChild(b)})(g);
+$("dia").value=clave(Date.now());
+$("dia").addEventListener("change",pintar);
+$("b-act").addEventListener("click",leer);
+$("b-csv").addEventListener("click",function(e){
+  e.preventDefault();var q=function(s){return '"'+String(s).replace(/"/g,'""')+'"'};
+  var out=["fecha,hora,naranja_nombre,naranja_grado,naranja_goles,azul_nombre,azul_grado,azul_goles,ganador,muerte_subita"];
+  lista.slice().reverse().forEach(function(m){var d=new Date(m.ts);
+    out.push([q(d.toLocaleDateString("es-AR")),q(d.toLocaleTimeString("es-AR")),q(m.naranja.nombre),m.naranja.grado,m.naranja.goles,q(m.azul.nombre),m.azul.grado,m.azul.goles,m.ganador,m.muerteSubita?"si":"no"].join(","))});
+  var a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["﻿"+out.join("\r\n")],{type:"text/csv"}));a.download="penales-mutualistas.csv";document.body.appendChild(a);a.click();a.remove();
+});
+pintar();leer();setInterval(function(){if(!document.hidden)leer()},20000);
+})();
+</script>
+</body>
+</html>
